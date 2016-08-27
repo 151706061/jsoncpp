@@ -5,6 +5,7 @@
 
 #ifndef LIB_JSONCPP_JSON_TOOL_H_INCLUDED
 #define LIB_JSONCPP_JSON_TOOL_H_INCLUDED
+#include <clocale>
 
 /* This header provides common string manipulation support, such as UTF-8,
  * portable conversion from/to string...
@@ -15,8 +16,8 @@
 namespace Json {
 
 /// Converts a unicode code-point to UTF-8.
-static inline std::string codePointToUTF8(unsigned int cp) {
-  std::string result;
+static inline JSONCPP_STRING codePointToUTF8(unsigned int cp) {
+  JSONCPP_STRING result;
 
   // based on description from http://en.wikipedia.org/wiki/UTF-8
 
@@ -30,8 +31,8 @@ static inline std::string codePointToUTF8(unsigned int cp) {
   } else if (cp <= 0xFFFF) {
     result.resize(3);
     result[2] = static_cast<char>(0x80 | (0x3f & cp));
-    result[1] = 0x80 | static_cast<char>((0x3f & (cp >> 6)));
-    result[0] = 0xE0 | static_cast<char>((0xf & (cp >> 12)));
+    result[1] = static_cast<char>(0x80 | (0x3f & (cp >> 6)));
+    result[0] = static_cast<char>(0xE0 | (0xf & (cp >> 12)));
   } else if (cp <= 0x10FFFF) {
     result.resize(4);
     result[3] = static_cast<char>(0x80 | (0x3f & cp));
@@ -43,7 +44,7 @@ static inline std::string codePointToUTF8(unsigned int cp) {
   return result;
 }
 
-/// Returns true if ch is a control character (in range [0,32[).
+/// Returns true if ch is a control character (in range [1,31]).
 static inline bool isControlCharacter(char ch) { return ch > 0 && ch <= 0x1F; }
 
 enum {
@@ -63,7 +64,7 @@ typedef char UIntToStringBuffer[uintToStringBufferSize];
 static inline void uintToString(LargestUInt value, char*& current) {
   *--current = 0;
   do {
-    *--current = char(value % 10) + '0';
+    *--current = static_cast<char>(value % 10U + static_cast<unsigned>('0'));
     value /= 10;
   } while (value != 0);
 }
@@ -79,6 +80,18 @@ static inline void fixNumericLocale(char* begin, char* end) {
       *begin = '.';
     }
     ++begin;
+  }
+}
+
+static inline void fixNumericLocaleInput(char* begin, char* end) {
+  struct lconv* lc = localeconv();
+  if ((lc != NULL) && (*(lc->decimal_point) != '.')) {
+    while (begin < end) {
+      if (*begin == '.') {
+        *begin = *(lc->decimal_point);
+      }
+      ++begin;
+    }
   }
 }
 
