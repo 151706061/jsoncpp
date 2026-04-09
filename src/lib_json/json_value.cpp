@@ -1704,4 +1704,6 @@ Value& Path::make(Value& root) const {
   return *node;
 }
 
+const char* version() { return JSONCPP_VERSION_STRING; }
+
 } // namespace Json
