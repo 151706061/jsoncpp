@@ -441,14 +441,6 @@ Value::Value(const String& value) {
       value.data(), static_cast<unsigned>(value.length()));
 }
 
-#ifdef JSONCPP_HAS_STRING_VIEW
-Value::Value(std::string_view value) {
-  initBasic(stringValue, true);
-  value_.string_ = duplicateAndPrefixStringValue(
-      value.data(), static_cast<unsigned>(value.length()));
-}
-#endif
-
 Value::Value(const StaticString& value) {
   initBasic(stringValue);
   value_.string_ = const_cast<char*>(value.c_str());
@@ -655,21 +647,6 @@ bool Value::getString(char const** begin, char const** end) const {
   *end = *begin + length;
   return true;
 }
-
-#ifdef JSONCPP_HAS_STRING_VIEW
-bool Value::getString(std::string_view* str) const {
-  if (type() != stringValue)
-    return false;
-  if (value_.string_ == nullptr)
-    return false;
-  const char* begin;
-  unsigned length;
-  decodePrefixedString(this->isAllocated(), this->value_.string_, &length,
-                       &begin);
-  *str = std::string_view(begin, length);
-  return true;
-}
-#endif
 
 String Value::asString() const {
   switch (type()) {
@@ -1190,17 +1167,6 @@ Value* Value::demand(char const* begin, char const* end) {
                       "objectValue or nullValue");
   return &resolveReference(begin, end);
 }
-#ifdef JSONCPP_HAS_STRING_VIEW
-const Value& Value::operator[](std::string_view key) const {
-  Value const* found = find(key.data(), key.data() + key.length());
-  if (!found)
-    return nullSingleton();
-  return *found;
-}
-Value& Value::operator[](std::string_view key) {
-  return resolveReference(key.data(), key.data() + key.length());
-}
-#else
 const Value& Value::operator[](const char* key) const {
   Value const* found = find(key, key + strlen(key));
   if (!found)
@@ -1221,7 +1187,6 @@ Value& Value::operator[](const char* key) {
 Value& Value::operator[](const String& key) {
   return resolveReference(key.data(), key.data() + key.length());
 }
-#endif
 
 Value& Value::operator[](const StaticString& key) {
   return resolveReference(key.c_str());
@@ -1261,18 +1226,12 @@ Value Value::get(char const* begin, char const* end,
   Value const* found = find(begin, end);
   return !found ? defaultValue : *found;
 }
-#ifdef JSONCPP_HAS_STRING_VIEW
-Value Value::get(std::string_view key, const Value& defaultValue) const {
-  return get(key.data(), key.data() + key.length(), defaultValue);
-}
-#else
 Value Value::get(char const* key, Value const& defaultValue) const {
   return get(key, key + strlen(key), defaultValue);
 }
 Value Value::get(String const& key, Value const& defaultValue) const {
   return get(key.data(), key.data() + key.length(), defaultValue);
 }
-#endif
 
 bool Value::removeMember(const char* begin, const char* end, Value* removed) {
   if (type() != objectValue) {
@@ -1288,31 +1247,13 @@ bool Value::removeMember(const char* begin, const char* end, Value* removed) {
   value_.map_->erase(it);
   return true;
 }
-#ifdef JSONCPP_HAS_STRING_VIEW
-bool Value::removeMember(std::string_view key, Value* removed) {
-  return removeMember(key.data(), key.data() + key.length(), removed);
-}
-#else
 bool Value::removeMember(const char* key, Value* removed) {
   return removeMember(key, key + strlen(key), removed);
 }
 bool Value::removeMember(String const& key, Value* removed) {
   return removeMember(key.data(), key.data() + key.length(), removed);
 }
-#endif
 
-#ifdef JSONCPP_HAS_STRING_VIEW
-void Value::removeMember(std::string_view key) {
-  JSON_ASSERT_MESSAGE(type() == nullValue || type() == objectValue,
-                      "in Json::Value::removeMember(): requires objectValue");
-  if (type() == nullValue)
-    return;
-
-  CZString actualKey(key.data(), unsigned(key.length()),
-                     CZString::noDuplication);
-  value_.map_->erase(actualKey);
-}
-#else
 void Value::removeMember(const char* key) {
   JSON_ASSERT_MESSAGE(type() == nullValue || type() == objectValue,
                       "in Json::Value::removeMember(): requires objectValue");
@@ -1323,7 +1264,6 @@ void Value::removeMember(const char* key) {
   value_.map_->erase(actualKey);
 }
 void Value::removeMember(const String& key) { removeMember(key.c_str()); }
-#endif
 
 bool Value::removeIndex(ArrayIndex index, Value* removed) {
   if (type() != arrayValue) {
@@ -1353,18 +1293,12 @@ bool Value::isMember(char const* begin, char const* end) const {
   Value const* value = find(begin, end);
   return nullptr != value;
 }
-#ifdef JSONCPP_HAS_STRING_VIEW
-bool Value::isMember(std::string_view key) const {
-  return isMember(key.data(), key.data() + key.length());
-}
-#else
 bool Value::isMember(char const* key) const {
   return isMember(key, key + strlen(key));
 }
 bool Value::isMember(String const& key) const {
   return isMember(key.data(), key.data() + key.length());
 }
-#endif
 
 Value::Members Value::getMemberNames() const {
   JSON_ASSERT_MESSAGE(
